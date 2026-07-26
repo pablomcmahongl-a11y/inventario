@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar caja' if box else 'Nueva caja' }}{% endblock %}
+{% block content %}
+
+<h2>{{ 'Editar caja' if box else 'Nueva caja' }}</h2>
+
+<form method="post" class="form">
+  <label>Nombre *
+    <input type="text" name="name" required value="{{ box.name if box else '' }}"
+           placeholder="p.ej. Caja garaje 1, Armario dormitorio...">
+  </label>
+
+  <label>Ubicación
+    <input type="text" name="location" value="{{ box.location if box and box.location else '' }}"
+           placeholder="p.ej. Trastero, Garaje, Salón...">
+  </label>
+
+  <label>Descripción
+    <textarea name="description" rows="3">{{ box.description if box and box.description else '' }}</textarea>
+  </label>
+
+  <div class="form-actions">
+    <button type="submit">{{ 'Guardar cambios' if box else 'Crear caja' }}</button>
+    <a href="{{ url_for('box_list') }}" class="btn-secondary">Cancelar</a>
+  </div>
+</form>
+
+{% endblock %}

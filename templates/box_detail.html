@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ box.name }} · Inventario{% endblock %}
+{% block content %}
+
+<div class="box-header">
+  <div>
+    <h2>{{ box.name }}</h2>
+    {% if box.location %}<p class="muted">📍 {{ box.location }}</p>{% endif %}
+    {% if box.description %}<p>{{ box.description }}</p>{% endif %}
+    <div class="card-actions">
+      <a href="{{ url_for('box_edit', box_id=box.id) }}">Editar caja</a>
+      <a href="{{ url_for('item_new', box_id=box.id) }}">+ Añadir objeto a esta caja</a>
+    </div>
+  </div>
+
+  <div class="qr-panel">
+    <img src="{{ qr_url }}" alt="Código QR de {{ box.name }}" class="qr-image">
+    <a href="{{ qr_url }}" download="qr-{{ box.name }}.png" class="btn-secondary">Descargar QR</a>
+    <p class="muted small">Al escanear este código se abre esta misma página.</p>
+    <p class="muted small">{{ public_url }}</p>
+  </div>
+</div>
+
+<h3>Objetos en esta caja</h3>
+
+{% if box.items %}
+<div class="grid">
+  {% for item in box.items %}
+  <div class="card">
+    {% if item.photo_filename %}
+      <img class="card-photo" src="{{ url_for('uploaded_file', filename=item.photo_filename) }}" alt="{{ item.name }}">
+    {% else %}
+      <div class="card-photo placeholder">📦</div>
+    {% endif %}
+    <div class="card-body">
+      <h3>{{ item.name }}</h3>
+      <p class="muted">Cantidad: {{ item.quantity }}</p>
+      {% if item.category %}<span class="tag">{{ item.category }}</span>{% endif %}
+      {% if item.notes %}<p class="notes">{{ item.notes }}</p>{% endif %}
+      <div class="card-actions">
+        <a href="{{ url_for('item_edit', item_id=item.id) }}">Editar</a>
+        <form method="post" action="{{ url_for('item_delete', item_id=item.id) }}"
+              onsubmit="return confirm('¿Eliminar {{ item.name }}?');">
+          <button type="submit" class="link-danger">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">Esta caja está vacía. <a href="{{ url_for('item_new', box_id=box.id) }}">Añade un objeto</a>.</p>
+{% endif %}
+
+{% endblock %}

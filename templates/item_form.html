@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar objeto' if item else 'Nuevo objeto' }}{% endblock %}
+{% block content %}
+
+<h2>{{ 'Editar objeto' if item else 'Nuevo objeto' }}</h2>
+
+<form method="post" enctype="multipart/form-data" class="form">
+  <label>Nombre *
+    <input type="text" name="name" required value="{{ item.name if item else '' }}">
+  </label>
+
+  <label>Cantidad
+    <input type="number" name="quantity" min="0" value="{{ item.quantity if item else 1 }}">
+  </label>
+
+  <label>Categoría
+    <input type="text" name="category" list="category-list"
+           value="{{ item.category if item and item.category else '' }}"
+           placeholder="p.ej. Herramientas, Cocina, Ropa...">
+    <datalist id="category-list">
+      {% for c in categories %}<option value="{{ c }}">{% endfor %}
+    </datalist>
+  </label>
+
+  <label>Caja
+    <select name="box_id">
+      <option value="">Sin caja</option>
+      {% for b in boxes %}
+        <option value="{{ b.id }}"
+          {% if (item and item.box_id == b.id) or (preselect_box and preselect_box|string == b.id|string) %}selected{% endif %}>
+          {{ b.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label>Notas
+    <textarea name="notes" rows="3">{{ item.notes if item and item.notes else '' }}</textarea>
+  </label>
+
+  <label>Foto
+    <input type="file" name="photo" accept="image/*" capture="environment">
+  </label>
+
+  {% if item and item.photo_filename %}
+    <div class="current-photo">
+      <img src="{{ url_for('uploaded_file', filename=item.photo_filename) }}" alt="foto actual">
+      <label class="checkbox"><input type="checkbox" name="remove_photo" value="1"> Quitar foto actual</label>
+    </div>
+  {% endif %}
+
+  <div class="form-actions">
+    <button type="submit">{{ 'Guardar cambios' if item else 'Añadir objeto' }}</button>
+    <a href="{{ url_for('index') }}" class="btn-secondary">Cancelar</a>
+  </div>
+</form>
+
+{% endblock %}

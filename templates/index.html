@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Objetos · Inventario{% endblock %}
+{% block content %}
+
+<form class="filters" method="get">
+  <input type="text" name="q" placeholder="Buscar objeto..." value="{{ q }}">
+
+  <select name="category">
+    <option value="">Todas las categorías</option>
+    {% for c in categories %}
+      <option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="box_id">
+    <option value="">Todas las cajas</option>
+    {% for b in boxes %}
+      <option value="{{ b.id }}" {% if selected_box == b.id|string %}selected{% endif %}>{{ b.name }}</option>
+    {% endfor %}
+  </select>
+
+  <button type="submit">Filtrar</button>
+  {% if q or selected_category or selected_box %}
+    <a href="{{ url_for('index') }}" class="clear-link">Limpiar</a>
+  {% endif %}
+</form>
+
+{% if items %}
+<div class="grid">
+  {% for item in items %}
+  <div class="card">
+    {% if item.photo_filename %}
+      <img class="card-photo" src="{{ url_for('uploaded_file', filename=item.photo_filename) }}" alt="{{ item.name }}">
+    {% else %}
+      <div class="card-photo placeholder">📦</div>
+    {% endif %}
+    <div class="card-body">
+      <h3>{{ item.name }}</h3>
+      <p class="muted">Cantidad: {{ item.quantity }}</p>
+      {% if item.category %}<span class="tag">{{ item.category }}</span>{% endif %}
+      {% if item.box %}
+        <p class="muted">📦 <a href="{{ url_for('box_detail', box_id=item.box.id) }}">{{ item.box.name }}</a></p>
+      {% else %}
+        <p class="muted">Sin caja asignada</p>
+      {% endif %}
+      {% if item.notes %}<p class="notes">{{ item.notes }}</p>{% endif %}
+      <div class="card-actions">
+        <a href="{{ url_for('item_edit', item_id=item.id) }}">Editar</a>
+        <form method="post" action="{{ url_for('item_delete', item_id=item.id) }}"
+              onsubmit="return confirm('¿Eliminar {{ item.name }}?');">
+          <button type="submit" class="link-danger">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">No se han encontrado objetos. <a href="{{ url_for('item_new') }}">Añade el primero</a>.</p>
+{% endif %}
+
+{% endblock %}

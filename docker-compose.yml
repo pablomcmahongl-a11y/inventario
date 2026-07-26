@@ -1,0 +1,15 @@
+services:
+  inventario:
+    build: .
+    container_name: inventario
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Cambia esto por la IP o dominio con el que accederás a la app
+      # (se usa para generar los QR de las cajas correctamente)
+      - BASE_URL=http://REDACTED:8000
+      - SECRET_KEY=REDACTED
+    volumes:
+      - ./data/uploads:/app/uploads
+      - ./data/instance:/app/instance
