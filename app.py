@@ -122,14 +122,20 @@ def room_new():
             flash("El nombre de la habitación es obligatorio.", "error")
             return render_template("room_form.html", room=None)
 
-        room = Room(
-            name=name,
-            description=request.form.get("description", "").strip() or None,
-        )
-        db.session.add(room)
-        db.session.commit()
-        flash("Habitación creada.", "success")
-        return redirect(url_for("room_detail", room_id=room.id))
+        try:
+            room = Room(
+                name=name,
+                description=request.form.get("description", "").strip() or None,
+            )
+            db.session.add(room)
+            db.session.commit()
+            flash("Habitación creada.", "success")
+            return redirect(url_for("room_detail", room_id=room.id))
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error creando habitación: {str(e)}")
+            flash(f"Error al crear la habitación: {str(e)}", "error")
+            return render_template("room_form.html", room=None)
 
     return render_template("room_form.html", room=None)
 
@@ -145,20 +151,30 @@ def room_detail(room_id):
 def room_edit(room_id):
     room = Room.query.get_or_404(room_id)
     if request.method == "POST":
-        room.name = request.form.get("name", "").strip() or room.name
-        room.description = request.form.get("description", "").strip() or None
-        db.session.commit()
-        flash("Habitación actualizada.", "success")
-        return redirect(url_for("room_detail", room_id=room.id))
+        try:
+            room.name = request.form.get("name", "").strip() or room.name
+            room.description = request.form.get("description", "").strip() or None
+            db.session.commit()
+            flash("Habitación actualizada.", "success")
+            return redirect(url_for("room_detail", room_id=room.id))
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error actualizando habitación: {str(e)}")
+            flash(f"Error al actualizar la habitación: {str(e)}", "error")
     return render_template("room_form.html", room=room)
 
 
 @app.route("/rooms/<int:room_id>/delete", methods=["POST"])
 def room_delete(room_id):
-    room = Room.query.get_or_404(room_id)
-    db.session.delete(room)
-    db.session.commit()
-    flash("Habitación eliminada.", "success")
+    try:
+        room = Room.query.get_or_404(room_id)
+        db.session.delete(room)
+        db.session.commit()
+        flash("Habitación eliminada.", "success")
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error eliminando habitación: {str(e)}")
+        flash(f"Error al eliminar la habitación: {str(e)}", "error")
     return redirect(url_for("index"))
 
 
@@ -175,16 +191,22 @@ def box_new():
             flash("El nombre de la caja es obligatorio.", "error")
             return render_template("box_form.html", box=None, rooms=rooms, preselect_room=preselect_room)
 
-        box = Box(
-            name=name,
-            location=request.form.get("location", "").strip() or None,
-            description=request.form.get("description", "").strip() or None,
-            room_id=int(request.form["room_id"]) if request.form.get("room_id") else None,
-        )
-        db.session.add(box)
-        db.session.commit()
-        flash("Caja creada. Ya puedes imprimir su código QR.", "success")
-        return redirect(url_for("box_detail", box_id=box.id))
+        try:
+            box = Box(
+                name=name,
+                location=request.form.get("location", "").strip() or None,
+                description=request.form.get("description", "").strip() or None,
+                room_id=int(request.form["room_id"]) if request.form.get("room_id") else None,
+            )
+            db.session.add(box)
+            db.session.commit()
+            flash("Caja creada. Ya puedes imprimir su código QR.", "success")
+            return redirect(url_for("box_detail", box_id=box.id))
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error creando caja: {str(e)}")
+            flash(f"Error al crear la caja: {str(e)}", "error")
+            return render_template("box_form.html", box=None, rooms=rooms, preselect_room=preselect_room)
 
     return render_template("box_form.html", box=None, rooms=rooms, preselect_room=preselect_room)
 
@@ -203,25 +225,37 @@ def box_edit(box_id):
     box = Box.query.get_or_404(box_id)
     rooms = Room.query.order_by(Room.name).all()
     if request.method == "POST":
-        box.name = request.form.get("name", "").strip() or box.name
-        box.location = request.form.get("location", "").strip() or None
-        box.description = request.form.get("description", "").strip() or None
-        box.room_id = int(request.form["room_id"]) if request.form.get("room_id") else None
-        db.session.commit()
-        flash("Caja actualizada.", "success")
-        return redirect(url_for("box_detail", box_id=box.id))
+        try:
+            box.name = request.form.get("name", "").strip() or box.name
+            box.location = request.form.get("location", "").strip() or None
+            box.description = request.form.get("description", "").strip() or None
+            box.room_id = int(request.form["room_id"]) if request.form.get("room_id") else None
+            db.session.commit()
+            flash("Caja actualizada.", "success")
+            return redirect(url_for("box_detail", box_id=box.id))
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error actualizando caja: {str(e)}")
+            flash(f"Error al actualizar la caja: {str(e)}", "error")
     return render_template("box_form.html", box=box, rooms=rooms)
 
 
 @app.route("/boxes/<int:box_id>/delete", methods=["POST"])
 def box_delete(box_id):
-    box = Box.query.get_or_404(box_id)
-    room_id = box.room_id
-    for item in box.items:
-        item.box_id = None
-    db.session.delete(box)
-    db.session.commit()
-    flash("Caja eliminada. Sus objetos ahora no tienen caja asignada.", "success")
+    try:
+        box = Box.query.get_or_404(box_id)
+        room_id = box.room_id
+        for item in box.items:
+            item.box_id = None
+        db.session.delete(box)
+        db.session.commit()
+        flash("Caja eliminada. Sus objetos ahora no tienen caja asignada.", "success")
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error eliminando caja: {str(e)}")
+        flash(f"Error al eliminar la caja: {str(e)}", "error")
+        room_id = None
+    
     if room_id:
         return redirect(url_for("room_detail", room_id=room_id))
     return redirect(url_for("index"))
@@ -254,21 +288,28 @@ def item_new():
             return render_template("item_form.html", item=None, boxes=boxes,
                                     categories=categories, preselect_box=preselect_box)
 
-        item = Item(
-            name=name,
-            quantity=int(request.form.get("quantity") or 1),
-            category=request.form.get("category", "").strip() or None,
-            notes=request.form.get("notes", "").strip() or None,
-            box_id=int(request.form["box_id"]) if request.form.get("box_id") else None,
-        )
-        item.photo_filename = save_photo(request.files.get("photo"))
-        db.session.add(item)
-        db.session.commit()
-        flash("Objeto añadido.", "success")
+        try:
+            item = Item(
+                name=name,
+                quantity=int(request.form.get("quantity") or 1),
+                category=request.form.get("category", "").strip() or None,
+                notes=request.form.get("notes", "").strip() or None,
+                box_id=int(request.form["box_id"]) if request.form.get("box_id") else None,
+            )
+            item.photo_filename = save_photo(request.files.get("photo"))
+            db.session.add(item)
+            db.session.commit()
+            flash("Objeto añadido.", "success")
 
-        if item.box_id:
-            return redirect(url_for("box_detail", box_id=item.box_id))
-        return redirect(url_for("index"))
+            if item.box_id:
+                return redirect(url_for("box_detail", box_id=item.box_id))
+            return redirect(url_for("index"))
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error creando objeto: {str(e)}")
+            flash(f"Error al crear el objeto: {str(e)}", "error")
+            return render_template("item_form.html", item=None, boxes=boxes,
+                                    categories=categories, preselect_box=preselect_box)
 
     return render_template("item_form.html", item=None, boxes=boxes,
                             categories=categories, preselect_box=preselect_box)
@@ -281,26 +322,31 @@ def item_edit(item_id):
     categories = all_categories()
 
     if request.method == "POST":
-        item.name = request.form.get("name", "").strip() or item.name
-        item.quantity = int(request.form.get("quantity") or 1)
-        item.category = request.form.get("category", "").strip() or None
-        item.notes = request.form.get("notes", "").strip() or None
-        item.box_id = int(request.form["box_id"]) if request.form.get("box_id") else None
+        try:
+            item.name = request.form.get("name", "").strip() or item.name
+            item.quantity = int(request.form.get("quantity") or 1)
+            item.category = request.form.get("category", "").strip() or None
+            item.notes = request.form.get("notes", "").strip() or None
+            item.box_id = int(request.form["box_id"]) if request.form.get("box_id") else None
 
-        if request.form.get("remove_photo") == "1":
-            delete_photo(item.photo_filename)
-            item.photo_filename = None
+            if request.form.get("remove_photo") == "1":
+                delete_photo(item.photo_filename)
+                item.photo_filename = None
 
-        new_photo = save_photo(request.files.get("photo"))
-        if new_photo:
-            delete_photo(item.photo_filename)
-            item.photo_filename = new_photo
+            new_photo = save_photo(request.files.get("photo"))
+            if new_photo:
+                delete_photo(item.photo_filename)
+                item.photo_filename = new_photo
 
-        db.session.commit()
-        flash("Objeto actualizado.", "success")
-        if item.box_id:
-            return redirect(url_for("box_detail", box_id=item.box_id))
-        return redirect(url_for("index"))
+            db.session.commit()
+            flash("Objeto actualizado.", "success")
+            if item.box_id:
+                return redirect(url_for("box_detail", box_id=item.box_id))
+            return redirect(url_for("index"))
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error actualizando objeto: {str(e)}")
+            flash(f"Error al actualizar el objeto: {str(e)}", "error")
 
     return render_template("item_form.html", item=item, boxes=boxes,
                             categories=categories)
@@ -308,12 +354,19 @@ def item_edit(item_id):
 
 @app.route("/items/<int:item_id>/delete", methods=["POST"])
 def item_delete(item_id):
-    item = Item.query.get_or_404(item_id)
-    box_id = item.box_id
-    delete_photo(item.photo_filename)
-    db.session.delete(item)
-    db.session.commit()
-    flash("Objeto eliminado.", "success")
+    try:
+        item = Item.query.get_or_404(item_id)
+        box_id = item.box_id
+        delete_photo(item.photo_filename)
+        db.session.delete(item)
+        db.session.commit()
+        flash("Objeto eliminado.", "success")
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error eliminando objeto: {str(e)}")
+        flash(f"Error al eliminar el objeto: {str(e)}", "error")
+        box_id = None
+    
     if box_id:
         return redirect(url_for("box_detail", box_id=box_id))
     return redirect(url_for("index"))
