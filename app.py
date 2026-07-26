@@ -36,15 +36,26 @@ db = SQLAlchemy(app)
 
 # ---------------------------------------------------------------- MODELOS
 
+class Room(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    boxes = db.relationship("Box", backref="room", lazy=True,
+                            order_by="Box.name", cascade="all, delete-orphan")
+
+
 class Box(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     location = db.Column(db.String(120))
     description = db.Column(db.Text)
+    room_id = db.Column(db.Integer, db.ForeignKey("room.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     items = db.relationship("Item", backref="box", lazy=True,
-                             order_by="Item.name")
+                             order_by="Item.name", cascade="all, delete-orphan")
 
 
 class Item(db.Model):
@@ -95,47 +106,153 @@ def all_categories():
     return [r[0] for r in rows]
 
 
-# ---------------------------------------------------------------- RUTAS: DASHBOARD / ITEMS
+# ---------------------------------------------------------------- RUTAS: HABITACIONES
 
 @app.route("/")
 def index():
-    q = request.args.get("q", "").strip()
-    category = request.args.get("category", "").strip()
-    box_id = request.args.get("box_id", "").strip()
+    rooms = Room.query.order_by(Room.name).all()
+    return render_template("room_list.html", rooms=rooms)
 
-    query = Item.query
 
-    if q:
-        like = f"%{q}%"
-        query = query.filter(
-            db.or_(Item.name.ilike(like), Item.notes.ilike(like))
+@app.route("/rooms/new", methods=["GET", "POST"])
+def room_new():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("El nombre de la habitación es obligatorio.", "error")
+            return render_template("room_form.html", room=None)
+
+        room = Room(
+            name=name,
+            description=request.form.get("description", "").strip() or None,
         )
-    if category:
-        query = query.filter(Item.category == category)
-    if box_id:
-        query = query.filter(Item.box_id == int(box_id))
+        db.session.add(room)
+        db.session.commit()
+        flash("Habitación creada.", "success")
+        return redirect(url_for("room_detail", room_id=room.id))
 
-    items = query.order_by(Item.name).all()
-    boxes = Box.query.order_by(Box.name).all()
-    categories = all_categories()
+    return render_template("room_form.html", room=None)
 
-    return render_template(
-        "index.html", items=items, boxes=boxes, categories=categories,
-        q=q, selected_category=category, selected_box=box_id
-    )
 
+@app.route("/rooms/<int:room_id>")
+def room_detail(room_id):
+    room = Room.query.get_or_404(room_id)
+    boxes = room.boxes
+    return render_template("room_detail.html", room=room, boxes=boxes)
+
+
+@app.route("/rooms/<int:room_id>/edit", methods=["GET", "POST"])
+def room_edit(room_id):
+    room = Room.query.get_or_404(room_id)
+    if request.method == "POST":
+        room.name = request.form.get("name", "").strip() or room.name
+        room.description = request.form.get("description", "").strip() or None
+        db.session.commit()
+        flash("Habitación actualizada.", "success")
+        return redirect(url_for("room_detail", room_id=room.id))
+    return render_template("room_form.html", room=room)
+
+
+@app.route("/rooms/<int:room_id>/delete", methods=["POST"])
+def room_delete(room_id):
+    room = Room.query.get_or_404(room_id)
+    db.session.delete(room)
+    db.session.commit()
+    flash("Habitación eliminada.", "success")
+    return redirect(url_for("index"))
+
+
+# ---------------------------------------------------------------- RUTAS: CAJAS
+
+@app.route("/boxes/new", methods=["GET", "POST"])
+def box_new():
+    rooms = Room.query.order_by(Room.name).all()
+    preselect_room = request.args.get("room_id")
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("El nombre de la caja es obligatorio.", "error")
+            return render_template("box_form.html", box=None, rooms=rooms, preselect_room=preselect_room)
+
+        box = Box(
+            name=name,
+            location=request.form.get("location", "").strip() or None,
+            description=request.form.get("description", "").strip() or None,
+            room_id=int(request.form["room_id"]) if request.form.get("room_id") else None,
+        )
+        db.session.add(box)
+        db.session.commit()
+        flash("Caja creada. Ya puedes imprimir su código QR.", "success")
+        return redirect(url_for("box_detail", box_id=box.id))
+
+    return render_template("box_form.html", box=None, rooms=rooms, preselect_room=preselect_room)
+
+
+@app.route("/boxes/<int:box_id>")
+def box_detail(box_id):
+    box = Box.query.get_or_404(box_id)
+    qr_url = url_for("box_qr", box_id=box.id)
+    public_url = f"{BASE_URL}{url_for('box_detail', box_id=box.id)}"
+    return render_template("box_detail.html", box=box, qr_url=qr_url,
+                            public_url=public_url)
+
+
+@app.route("/boxes/<int:box_id>/edit", methods=["GET", "POST"])
+def box_edit(box_id):
+    box = Box.query.get_or_404(box_id)
+    rooms = Room.query.order_by(Room.name).all()
+    if request.method == "POST":
+        box.name = request.form.get("name", "").strip() or box.name
+        box.location = request.form.get("location", "").strip() or None
+        box.description = request.form.get("description", "").strip() or None
+        box.room_id = int(request.form["room_id"]) if request.form.get("room_id") else None
+        db.session.commit()
+        flash("Caja actualizada.", "success")
+        return redirect(url_for("box_detail", box_id=box.id))
+    return render_template("box_form.html", box=box, rooms=rooms)
+
+
+@app.route("/boxes/<int:box_id>/delete", methods=["POST"])
+def box_delete(box_id):
+    box = Box.query.get_or_404(box_id)
+    room_id = box.room_id
+    for item in box.items:
+        item.box_id = None
+    db.session.delete(box)
+    db.session.commit()
+    flash("Caja eliminada. Sus objetos ahora no tienen caja asignada.", "success")
+    if room_id:
+        return redirect(url_for("room_detail", room_id=room_id))
+    return redirect(url_for("index"))
+
+
+@app.route("/boxes/<int:box_id>/qr.png")
+def box_qr(box_id):
+    box = Box.query.get_or_404(box_id)
+    target_url = f"{BASE_URL}{url_for('box_detail', box_id=box.id)}"
+
+    img = qrcode.make(target_url, box_size=10, border=2)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
+
+
+# ---------------------------------------------------------------- RUTAS: OBJETOS
 
 @app.route("/items/new", methods=["GET", "POST"])
 def item_new():
     boxes = Box.query.order_by(Box.name).all()
     categories = all_categories()
+    preselect_box = request.args.get("box_id")
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         if not name:
             flash("El nombre es obligatorio.", "error")
             return render_template("item_form.html", item=None, boxes=boxes,
-                                    categories=categories)
+                                    categories=categories, preselect_box=preselect_box)
 
         item = Item(
             name=name,
@@ -153,7 +270,6 @@ def item_new():
             return redirect(url_for("box_detail", box_id=item.box_id))
         return redirect(url_for("index"))
 
-    preselect_box = request.args.get("box_id")
     return render_template("item_form.html", item=None, boxes=boxes,
                             categories=categories, preselect_box=preselect_box)
 
@@ -182,6 +298,8 @@ def item_edit(item_id):
 
         db.session.commit()
         flash("Objeto actualizado.", "success")
+        if item.box_id:
+            return redirect(url_for("box_detail", box_id=item.box_id))
         return redirect(url_for("index"))
 
     return render_template("item_form.html", item=item, boxes=boxes,
@@ -199,80 +317,6 @@ def item_delete(item_id):
     if box_id:
         return redirect(url_for("box_detail", box_id=box_id))
     return redirect(url_for("index"))
-
-
-# ---------------------------------------------------------------- RUTAS: CAJAS
-
-@app.route("/boxes")
-def box_list():
-    boxes = Box.query.order_by(Box.name).all()
-    return render_template("box_list.html", boxes=boxes)
-
-
-@app.route("/boxes/new", methods=["GET", "POST"])
-def box_new():
-    if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        if not name:
-            flash("El nombre de la caja es obligatorio.", "error")
-            return render_template("box_form.html", box=None)
-
-        box = Box(
-            name=name,
-            location=request.form.get("location", "").strip() or None,
-            description=request.form.get("description", "").strip() or None,
-        )
-        db.session.add(box)
-        db.session.commit()
-        flash("Caja creada. Ya puedes imprimir su código QR.", "success")
-        return redirect(url_for("box_detail", box_id=box.id))
-
-    return render_template("box_form.html", box=None)
-
-
-@app.route("/boxes/<int:box_id>")
-def box_detail(box_id):
-    box = Box.query.get_or_404(box_id)
-    qr_url = url_for("box_qr", box_id=box.id)
-    public_url = f"{BASE_URL}{url_for('box_detail', box_id=box.id)}"
-    return render_template("box_detail.html", box=box, qr_url=qr_url,
-                            public_url=public_url)
-
-
-@app.route("/boxes/<int:box_id>/edit", methods=["GET", "POST"])
-def box_edit(box_id):
-    box = Box.query.get_or_404(box_id)
-    if request.method == "POST":
-        box.name = request.form.get("name", "").strip() or box.name
-        box.location = request.form.get("location", "").strip() or None
-        box.description = request.form.get("description", "").strip() or None
-        db.session.commit()
-        flash("Caja actualizada.", "success")
-        return redirect(url_for("box_detail", box_id=box.id))
-    return render_template("box_form.html", box=box)
-
-
-@app.route("/boxes/<int:box_id>/delete", methods=["POST"])
-def box_delete(box_id):
-    box = Box.query.get_or_404(box_id)
-    for item in box.items:
-        item.box_id = None
-    db.session.delete(box)
-    db.session.commit()
-    flash("Caja eliminada. Sus objetos ahora no tienen caja asignada.", "success")
-    return redirect(url_for("box_list"))
-
-
-@app.route("/boxes/<int:box_id>/qr.png")
-def box_qr(box_id):
-    box = Box.query.get_or_404(box_id)
-    target_url = f"{BASE_URL}{url_for('box_detail', box_id=box.id)}"
-
-    img = qrcode.make(target_url, box_size=10, border=2)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return send_file(buf, mimetype="image/png")
 
 
 # ---------------------------------------------------------------- ARCHIVOS

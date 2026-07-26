@@ -5,7 +5,10 @@
 <div class="box-header">
   <div>
     <h2>{{ box.name }}</h2>
-    {% if box.location %}<p class="muted">📍 {{ box.location }}</p>{% endif %}
+    {% if box.room %}
+      <p class="muted">📍 <a href="{{ url_for('room_detail', room_id=box.room.id) }}">{{ box.room.name }}</a></p>
+    {% endif %}
+    {% if box.location %}<p class="muted">📦 {{ box.location }}</p>{% endif %}
     {% if box.description %}<p>{{ box.description }}</p>{% endif %}
     <div class="card-actions">
       <a href="{{ url_for('box_edit', box_id=box.id) }}">Editar caja</a>
@@ -40,7 +43,8 @@
       <div class="card-actions">
         <a href="{{ url_for('item_edit', item_id=item.id) }}">Editar</a>
         <form method="post" action="{{ url_for('item_delete', item_id=item.id) }}"
-              onsubmit="return confirm('¿Eliminar {{ item.name }}?');">
+              onsubmit="return confirm('¿Eliminar {{ item.name }}?');"
+              style="display:inline;">
           <button type="submit" class="link-danger">Eliminar</button>
         </form>
       </div>

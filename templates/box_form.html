@@ -7,12 +7,24 @@
 <form method="post" class="form">
   <label>Nombre *
     <input type="text" name="name" required value="{{ box.name if box else '' }}"
-           placeholder="p.ej. Caja garaje 1, Armario dormitorio...">
+           placeholder="p.ej. Caja madera, Caja plástico...">
+  </label>
+
+  <label>Habitación
+    <select name="room_id">
+      <option value="">Sin habitación</option>
+      {% for r in rooms %}
+        <option value="{{ r.id }}"
+          {% if (box and box.room_id == r.id) or (preselect_room and preselect_room|string == r.id|string) %}selected{% endif %}>
+          {{ r.name }}
+        </option>
+      {% endfor %}
+    </select>
   </label>
 
   <label>Ubicación
     <input type="text" name="location" value="{{ box.location if box and box.location else '' }}"
-           placeholder="p.ej. Trastero, Garaje, Salón...">
+           placeholder="p.ej. Estante 2, Armario bajo...">
   </label>
 
   <label>Descripción
@@ -21,7 +33,7 @@
 
   <div class="form-actions">
     <button type="submit">{{ 'Guardar cambios' if box else 'Crear caja' }}</button>
-    <a href="{{ url_for('box_list') }}" class="btn-secondary">Cancelar</a>
+    <a href="{{ url_for('index') }}" class="btn-secondary">Cancelar</a>
   </div>
 </form>
 

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Habitaciones · Inventario{% endblock %}
+{% block content %}
+
+<h2>Habitaciones</h2>
+
+{% if rooms %}
+<div class="grid">
+  {% for room in rooms %}
+  <div class="card">
+    <div class="card-photo placeholder">🏠</div>
+    <div class="card-body">
+      <h3><a href="{{ url_for('room_detail', room_id=room.id) }}" class="card-link">{{ room.name }}</a></h3>
+      <p class="muted">{{ room.boxes|length }} caja(s)</p>
+      {% if room.description %}<p class="notes">{{ room.description }}</p>{% endif %}
+      <div class="card-actions">
+        <a href="{{ url_for('room_edit', room_id=room.id) }}">Editar</a>
+        <a href="{{ url_for('box_new', room_id=room.id) }}">+ Caja</a>
+        <form method="post" action="{{ url_for('room_delete', room_id=room.id) }}"
+              onsubmit="return confirm('¿Eliminar la habitación {{ room.name }}? Las cajas quedarán sin habitación.');"
+              style="display:inline;">
+          <button type="submit" class="link-danger">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">Todavía no hay habitaciones. <a href="{{ url_for('room_new') }}">Crea la primera</a>.</p>
+{% endif %}
+
+{% endblock %}

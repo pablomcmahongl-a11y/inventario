@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar habitación' if room else 'Nueva habitación' }}{% endblock %}
+{% block content %}
+
+<h2>{{ 'Editar habitación' if room else 'Nueva habitación' }}</h2>
+
+<form method="post" class="form">
+  <label>Nombre *
+    <input type="text" name="name" required value="{{ room.name if room else '' }}"
+           placeholder="p.ej. Salón, Cocina, Dormitorio...">
+  </label>
+
+  <label>Descripción
+    <textarea name="description" rows="3">{{ room.description if room and room.description else '' }}</textarea>
+  </label>
+
+  <div class="form-actions">
+    <button type="submit">{{ 'Guardar cambios' if room else 'Crear habitación' }}</button>
+    <a href="{{ url_for('index') }}" class="btn-secondary">Cancelar</a>
+  </div>
+</form>
+
+{% endblock %}
