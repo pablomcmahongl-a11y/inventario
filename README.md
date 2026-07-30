@@ -27,20 +27,22 @@ sudo usermod -aG docker $USER   # cierra sesión y vuelve a entrar tras esto
    scp -r inventario tuusuario@TU_SERVIDOR:/home/tuusuario/
    ```
 
-2. Entra en el servidor y edita `docker-compose.yml`:
+2. Entra en el servidor y crea tu `.env` a partir de la plantilla:
    ```bash
    cd inventario
-   nano docker-compose.yml
+   cp .env.example .env
+   nano .env
    ```
-   Cambia la línea `BASE_URL` por la IP local de tu servidor (o el dominio
-   que uses), por ejemplo:
-   ```yaml
-   - BASE_URL=http://192.168.1.50:8000
+   Cambia `BASE_URL` por la IP local de tu servidor (o el dominio que uses),
+   por ejemplo:
+   ```
+   BASE_URL=http://192.168.1.50:8000
    ```
    **Esto es importante**: es la URL que se codifica dentro de cada QR, así
    que tiene que ser la dirección con la que realmente vas a acceder a la
    app desde el móvil. Cambia también `SECRET_KEY` por cualquier cadena
-   aleatoria.
+   aleatoria. `.env` no se sube a git, así que estos valores (IP, dominio,
+   clave secreta) se quedan solo en tu servidor.
 
 3. Levanta la aplicación:
    ```bash

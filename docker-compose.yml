@@ -5,11 +5,13 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
-      # Cambia esto por la IP o dominio con el que accederás a la app
-      # (se usa para generar los QR de las cajas correctamente)
-      - BASE_URL=http://REDACTED:8000
-      - SECRET_KEY=REDACTED
+      # Los valores reales de BASE_URL y SECRET_KEY se definen en .env
+      # (no versionado). Usa .env.example como plantilla.
+      - BASE_URL=${BASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
     volumes:
       - ./data/uploads:/app/uploads
       - ./data/instance:/app/instance
