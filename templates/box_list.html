@@ -1,24 +1,39 @@
 {% extends "base.html" %}
 {% block title %}Cajas · Inventario{% endblock %}
 {% block content %}
+{% from "_icons.html" import icon %}
+{% from "_forms.html" import csrf_field %}
 
-<h2>Cajas</h2>
+<div class="page-header">
+  <h2>{{ icon('box', 22) }} Cajas</h2>
+  <div class="card-actions">
+    <a href="{{ url_for('boxes.qr_sheet') }}" class="btn-secondary">{{ icon('qr', 14) }} Imprimir todos los QR</a>
+    <a href="{{ url_for('boxes.new') }}" class="btn-nav">{{ icon('plus', 14) }} Nueva caja</a>
+  </div>
+</div>
 
 {% if boxes %}
 <div class="grid">
   {% for box in boxes %}
   <div class="card">
-    <a href="{{ url_for('box_detail', box_id=box.id) }}" class="box-qr-thumb">
-      <img src="{{ url_for('box_qr', box_id=box.id) }}" alt="QR {{ box.name }}">
-    </a>
+    {% if box.photo_filename %}
+      <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=box.photo_filename) }}" alt="{{ box.name }}">
+    {% else %}
+      <a href="{{ url_for('boxes.detail', box_id=box.id) }}" class="box-qr-thumb">
+        <img src="{{ url_for('boxes.qr', box_id=box.id) }}" alt="QR {{ box.name }}">
+      </a>
+    {% endif %}
     <div class="card-body">
-      <h3><a href="{{ url_for('box_detail', box_id=box.id) }}">{{ box.name }}</a></h3>
-      {% if box.location %}<p class="muted">📍 {{ box.location }}</p>{% endif %}
+      <h3><a href="{{ url_for('boxes.detail', box_id=box.id) }}" class="card-link">{{ box.name }}</a></h3>
+      {% if box.room %}<p class="muted">{{ icon('room', 14) }} {{ box.room.name }}</p>{% endif %}
+      {% if box.location %}<p class="muted">{{ icon('map-pin', 14) }} {{ box.location }}</p>{% endif %}
       <p class="muted">{{ box.items|length }} objeto(s)</p>
       <div class="card-actions">
-        <a href="{{ url_for('box_edit', box_id=box.id) }}">Editar</a>
-        <form method="post" action="{{ url_for('box_delete', box_id=box.id) }}"
+        <a href="{{ url_for('boxes.edit', box_id=box.id) }}">Editar</a>
+        <a href="{{ url_for('items.new', box_id=box.id) }}">+ Objeto</a>
+        <form method="post" action="{{ url_for('boxes.delete', box_id=box.id) }}"
               onsubmit="return confirm('¿Eliminar la caja {{ box.name }}? Los objetos quedarán sin caja.');">
+          {{ csrf_field() }}
           <button type="submit" class="link-danger">Eliminar</button>
         </form>
       </div>
@@ -27,7 +42,7 @@
   {% endfor %}
 </div>
 {% else %}
-<p class="empty">Todavía no hay cajas. <a href="{{ url_for('box_new') }}">Crea la primera</a>.</p>
+<p class="empty">Todavía no hay cajas. <a href="{{ url_for('boxes.new') }}">Crea la primera</a>.</p>
 {% endif %}
 
 {% endblock %}

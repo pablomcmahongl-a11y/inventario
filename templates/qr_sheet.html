@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Imprimir QR · Inventario{% endblock %}
+{% block content %}
+
+<div class="page-header no-print">
+  <h2>Imprimir códigos QR</h2>
+  <button type="button" class="btn-nav" onclick="window.print()">Imprimir</button>
+</div>
+<p class="muted no-print">Recorta cada etiqueta y pégala en su caja física.</p>
+
+{% if boxes %}
+<div class="qr-sheet">
+  {% for box in boxes %}
+  <div class="qr-label">
+    <img src="{{ url_for('boxes.qr', box_id=box.id) }}" alt="QR {{ box.name }}">
+    <span>{{ box.name }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">Todavía no hay cajas.</p>
+{% endif %}
+
+{% endblock %}

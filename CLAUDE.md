@@ -5,76 +5,132 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A self-hosted Flask web app for keeping a household inventory. Rooms contain
-boxes, boxes contain items. Each box gets a QR code sticker; scanning it opens
-that box's contents directly. Runs on a home Ubuntu server via Docker, with
-SQLite + uploaded photos persisted on disk under `data/` (bind-mounted into
-the container). UI text and flash messages are in Spanish.
+boxes, boxes contain items, items can have several photos. Each box gets a
+QR code sticker; scanning it opens that box's contents directly. Runs on a
+home Ubuntu server via Docker, with SQLite + uploaded photos persisted on
+disk under `data/` (bind-mounted into the container). UI text and flash
+messages are in Spanish. Access is protected by a single admin login.
 
 ## Commands
 
-Run locally without Docker (dev server, auto-reload via `debug=True`):
+Local dev (no Docker):
 ```bash
-pip install -r requirements.txt
-python app.py            # serves on 0.0.0.0:8000
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+cp .env.example .env        # ADMIN_PASSWORD_HASH can stay empty locally
+flask db upgrade
+python wsgi.py               # serves on 0.0.0.0:8000, debug=True
 ```
 
-Run via Docker (matches production deployment):
+Tests: `pytest` (13 tests covering auth, CRUD flows, orphan-on-delete
+behavior, search, CSV export, quantity buttons, activity history).
+
+Docker (matches production):
 ```bash
-docker compose up -d --build
-docker compose down
+docker compose up -d --build   # runs `flask db upgrade` automatically on start
 ```
 
-There is no test suite and no linter/formatter configured in this repo.
+New migration after changing `app/models.py`:
+```bash
+FLASK_APP=wsgi.py flask db migrate -m "descripción"
+FLASK_APP=wsgi.py flask db upgrade
+```
+
+There is no linter/formatter configured.
 
 ## Architecture
 
-**Single-file Flask app.** `app.py` contains the models, all routes, and
-helper functions — there is no blueprint split or service layer. Routes are
-grouped by comment banners (`RUTAS: HABITACIONES` / `CAJAS` / `OBJETOS` /
-`ARCHIVOS`).
+**App factory + blueprints**, not a single file. `wsgi.py` calls
+`app.create_app()` (`app/__init__.py`), which wires up SQLAlchemy,
+Flask-Migrate, Flask-Login and Flask-WTF's CSRFProtect, then registers five
+blueprints under `app/blueprints/`: `auth`, `main` (dashboard/search/CSV
+export/`/uploads`), `rooms`, `boxes` (also owns the QR endpoints and the
+bulk QR print sheet), `items` (also owns the item detail page, quantity
++/- endpoint, and photo removal). `templates/` and `static/` live at the
+repo root, not inside `app/` — `create_app` points Flask at them explicitly
+since the package root otherwise resolves relative to `app/`.
 
-**Data model is a strict 3-level hierarchy:** `Room` → `Box` → `Item`
-(`app.py:39-69`). Both parent relationships use
-`cascade="all, delete-orphan"`. Note that `box_delete` manually nulls out
-`item.box_id` for every item in the box *before* deleting the box, rather
-than relying on cascade — if you touch that route, be aware the cascade and
-the manual null-out are both in play at once.
+**Data model** (`app/models.py`): `Room` → `Box` → `Item` → `Photo`
+(one item, many photos), plus `Activity` (an append-only log of
+created/updated/moved/deleted events, keyed by `entity_type` +
+`entity_id`, with `entity_name` denormalized so history survives deletion).
+There is **no cascade delete** between Room→Box or Box→Item — deleting a
+room orphans its boxes (`room_id = NULL`) and deleting a box orphans its
+items (`box_id = NULL`); this is deliberate (see git history: an earlier
+version cascade-deleted rooms' boxes/items while the confirm dialog claimed
+otherwise — fixed by removing the cascade instead of changing the dialog).
+`Item.photos` **does** cascade-delete (photos have no independent meaning).
+If you add a new parent/child relationship, decide orphan-vs-cascade
+deliberately and keep the confirm-dialog wording and the actual behavior in
+sync.
 
-**No migrations.** `db.create_all()` runs once at import time
-(`app.py:72-73`) and only creates tables that don't exist yet — it never
-alters existing ones. Changing a model's columns requires either a manual
-`ALTER TABLE` or deleting `instance/inventario.db` (or the mounted
-`data/instance/` volume in Docker) and letting it regenerate, which loses
-data. There's no Alembic/Flask-Migrate here.
+**Auth is a single hardcoded admin**, not a `User` table — see
+`app/security.py`. Credentials come from `ADMIN_USERNAME` /
+`ADMIN_PASSWORD_HASH` (a werkzeug hash) in `.env`. If
+`ADMIN_PASSWORD_HASH` is unset, `ensure_admin_password_configured()`
+generates a random one on every startup and logs it once (so the app is
+never silently unauthenticated, but also never permanently locked out) —
+don't "fix" this by defaulting to a fixed password.
+
+**CSRF protection is global** (`CSRFProtect(app)` in `app/extensions.py`),
+enabled via a `{{ csrf_field() }}` macro (`templates/_forms.html`) rather
+than per-view `FlaskForm` classes — every state-changing form must include
+it, there is no WTForms model layer to fall back on for validation.
+
+**Migrations are hand-written, not autogenerated**, because Flask-Migrate
+was introduced after the app had already been running unmigrated in
+production. `migrations/versions/0001_initial_schema.py` documents the
+schema that already existed (stamped, never actually executed against the
+real DB); `0002_photos_activity_room_box_photos.py` adds `Photo`/`Activity`,
+adds `Room.photo_filename`/`Box.photo_filename`/`Item.updated_at`, and
+**migrates data** from the old single `Item.photo_filename` column into the
+new `Photo` table before dropping that column (SQLite column drops go
+through `op.batch_alter_table`, required since SQLite's ALTER TABLE support
+is limited). Any future migration touching `item.photo_filename` should
+assume it no longer exists past 0002.
 
 **QR codes are generated on the fly, not stored.** `GET
-/boxes/<id>/qr.png` builds a PNG in memory each request, encoding a URL built
-from the `BASE_URL` env var (`app.py:264-273`). `BASE_URL` must be an address
-actually reachable from whatever device scans the code — it's baked into
-every QR image, so changing it means every previously printed sticker still
-points at the old address.
+/boxes/<id>/qr.png` builds a PNG in memory each request from a URL built
+from `BASE_URL`. `BASE_URL` must be an address actually reachable from
+whatever device scans the code — it's baked into every QR image, so
+changing it means every previously printed sticker still points at the old
+address. `boxes.qr_sheet` (`/boxes/qr-sheet`) reuses the same per-box QR
+endpoint to render a printable grid (`@media print` in `static/style.css`
+hides the nav/footer).
 
-**Uploaded photos** are saved under `uploads/` with randomized UUID
-filenames (`save_photo`, `app.py:83-91`) and referenced by
-`Item.photo_filename`; type is restricted to `ALLOWED_EXTENSIONS`, size
-capped by `MAX_CONTENT_LENGTH` (16MB). Deletion (`delete_photo`) is called
-both when a photo is explicitly removed/replaced on an item and when an item
-is deleted.
+**Uploaded files** go in `uploads/` (bind-mounted as `data/uploads` in
+Docker) with randomized UUID filenames (`app/utils.py:save_upload`);
+`Item`/`Box`/`Room` all reference photos this way. `main.uploaded_file`
+(`/uploads/<filename>`) is behind `@login_required` — photos of someone's
+belongings are private, don't relax that.
 
-**Two templates are currently unused:** `templates/index.html` and
-`templates/box_list.html` are left over from before the `Room` level was
-introduced (see git history: "Agregar nivel de habitaciones") and are not
-referenced by any route in `app.py` — the item search/filter UI they contain
-(by name, category, box) is not currently reachable. `index` now renders
-`room_list.html`. Don't assume these templates are live without checking
-`render_template` call sites.
+**Activity logging is manual**, not a signal/hook — every mutating route in
+`rooms.py`/`boxes.py`/`items.py` calls `log_activity(...)` explicitly before
+`db.session.commit()`. If you add a new mutating route, log it the same way
+or the dashboard's "actividad reciente" panel and the item detail history
+will silently miss it.
+
+## Docker Compose `.env` gotcha
+
+Compose auto-interpolates `${VAR}`-looking sequences it finds inside the
+project's `.env` file itself (not just in `docker-compose.yml`), even though
+that file is loaded via `env_file:`. A werkzeug password hash contains
+literal `$` (`scrypt:N:r:p$salt$hash`), so any `$word` fragment in it gets
+silently replaced with an empty string unless every `$` is escaped as `$$`.
+This bit us once already — `ADMIN_PASSWORD_HASH` got truncated at the first
+`$` and logins failed with no error until someone printed the env var inside
+the container. Always regenerate `.env` hashes with the `$$`-escaped form
+(documented in `.env.example`), and if login mysteriously stops working
+after a `.env` edit, check this first.
 
 ## Deployment config
 
-`docker-compose.yml` hardcodes real environment-specific values
-(`BASE_URL` pointing at a Tailscale IP, `SECRET_KEY`) rather than
-placeholders — this is the actual home-server config, not a template to copy
-verbatim into other deployments.
+`.env` (not committed) holds `BASE_URL`, `SECRET_KEY`, `ADMIN_USERNAME`,
+`ADMIN_PASSWORD_HASH` — real environment-specific values, not placeholders.
+`docker-compose.yml` loads it via `env_file`. `.env.example` is the
+committed template. The Docker `CMD` runs `flask db upgrade` before
+starting gunicorn, so schema migrations apply automatically on every
+container restart — don't add a manual migration step to the deploy docs.
 
 ## Repo quirks
 

@@ -6,12 +6,10 @@ services:
     ports:
       - "8000:8000"
     env_file:
+      # Todos los valores (BASE_URL, SECRET_KEY, ADMIN_USERNAME,
+      # ADMIN_PASSWORD_HASH...) se definen en .env, no versionado.
+      # Usa .env.example como plantilla.
       - .env
-    environment:
-      # Los valores reales de BASE_URL y SECRET_KEY se definen en .env
-      # (no versionado). Usa .env.example como plantilla.
-      - BASE_URL=${BASE_URL}
-      - SECRET_KEY=${SECRET_KEY}
     volumes:
       - ./data/uploads:/app/uploads
       - ./data/instance:/app/instance

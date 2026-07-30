@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Editar caja' if box else 'Nueva caja' }}{% endblock %}
 {% block content %}
+{% from "_forms.html" import csrf_field %}
 
 <h2>{{ 'Editar caja' if box else 'Nueva caja' }}</h2>
 
-<form method="post" class="form">
+<form method="post" enctype="multipart/form-data" class="form">
+  {{ csrf_field() }}
   <label>Nombre *
     <input type="text" name="name" required value="{{ box.name if box else '' }}"
            placeholder="p.ej. Caja madera, Caja plástico...">
@@ -31,9 +33,20 @@
     <textarea name="description" rows="3">{{ box.description if box and box.description else '' }}</textarea>
   </label>
 
+  <label>Foto
+    <input type="file" name="photo" accept="image/*" capture="environment">
+  </label>
+
+  {% if box and box.photo_filename %}
+    <div class="current-photo">
+      <img src="{{ url_for('main.uploaded_file', filename=box.photo_filename) }}" alt="foto actual">
+      <label class="checkbox"><input type="checkbox" name="remove_photo" value="1"> Quitar foto actual</label>
+    </div>
+  {% endif %}
+
   <div class="form-actions">
     <button type="submit">{{ 'Guardar cambios' if box else 'Crear caja' }}</button>
-    <a href="{{ url_for('index') }}" class="btn-secondary">Cancelar</a>
+    <a href="{{ url_for('boxes.list_boxes') }}" class="btn-secondary">Cancelar</a>
   </div>
 </form>
 

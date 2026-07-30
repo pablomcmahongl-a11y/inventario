@@ -1,37 +1,48 @@
 {% extends "base.html" %}
 {% block title %}{{ room.name }} · Inventario{% endblock %}
 {% block content %}
+{% from "_icons.html" import icon %}
+{% from "_forms.html" import csrf_field %}
+
+<a href="{{ url_for('rooms.list_rooms') }}" class="back-link">{{ icon('chevron-left', 14) }} Habitaciones</a>
 
 <div class="room-header">
+  {% if room.photo_filename %}
+    <img class="detail-photo" src="{{ url_for('main.uploaded_file', filename=room.photo_filename) }}" alt="{{ room.name }}">
+  {% endif %}
   <div>
     <h2>{{ room.name }}</h2>
     {% if room.description %}<p>{{ room.description }}</p>{% endif %}
     <div class="card-actions">
-      <a href="{{ url_for('room_edit', room_id=room.id) }}">Editar habitación</a>
-      <a href="{{ url_for('box_new', room_id=room.id) }}">+ Nueva caja</a>
+      <a href="{{ url_for('rooms.edit', room_id=room.id) }}">{{ icon('edit', 14) }} Editar habitación</a>
+      <a href="{{ url_for('boxes.new', room_id=room.id) }}">{{ icon('plus', 14) }} Nueva caja</a>
     </div>
   </div>
 </div>
 
-<h3>Cajas en esta habitación</h3>
+<h3 class="section-title">Cajas en esta habitación</h3>
 
 {% if boxes %}
 <div class="grid">
   {% for box in boxes %}
   <div class="card">
-    <a href="{{ url_for('box_detail', box_id=box.id) }}" class="box-qr-thumb">
-      <img src="{{ url_for('box_qr', box_id=box.id) }}" alt="QR {{ box.name }}">
-    </a>
+    {% if box.photo_filename %}
+      <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=box.photo_filename) }}" alt="{{ box.name }}">
+    {% else %}
+      <a href="{{ url_for('boxes.detail', box_id=box.id) }}" class="box-qr-thumb">
+        <img src="{{ url_for('boxes.qr', box_id=box.id) }}" alt="QR {{ box.name }}">
+      </a>
+    {% endif %}
     <div class="card-body">
-      <h3><a href="{{ url_for('box_detail', box_id=box.id) }}" class="card-link">{{ box.name }}</a></h3>
-      {% if box.location %}<p class="muted">📍 {{ box.location }}</p>{% endif %}
+      <h3><a href="{{ url_for('boxes.detail', box_id=box.id) }}" class="card-link">{{ box.name }}</a></h3>
+      {% if box.location %}<p class="muted">{{ icon('map-pin', 14) }} {{ box.location }}</p>{% endif %}
       <p class="muted">{{ box.items|length }} objeto(s)</p>
       <div class="card-actions">
-        <a href="{{ url_for('box_edit', box_id=box.id) }}">Editar</a>
-        <a href="{{ url_for('item_new', box_id=box.id) }}">+ Objeto</a>
-        <form method="post" action="{{ url_for('box_delete', box_id=box.id) }}"
-              onsubmit="return confirm('¿Eliminar la caja {{ box.name }}? Los objetos quedarán sin caja.');"
-              style="display:inline;">
+        <a href="{{ url_for('boxes.edit', box_id=box.id) }}">Editar</a>
+        <a href="{{ url_for('items.new', box_id=box.id) }}">+ Objeto</a>
+        <form method="post" action="{{ url_for('boxes.delete', box_id=box.id) }}"
+              onsubmit="return confirm('¿Eliminar la caja {{ box.name }}? Los objetos quedarán sin caja.');">
+          {{ csrf_field() }}
           <button type="submit" class="link-danger">Eliminar</button>
         </form>
       </div>
@@ -40,7 +51,7 @@
   {% endfor %}
 </div>
 {% else %}
-<p class="empty">Esta habitación no tiene cajas. <a href="{{ url_for('box_new', room_id=room.id) }}">Crea la primera</a>.</p>
+<p class="empty">Esta habitación no tiene cajas. <a href="{{ url_for('boxes.new', room_id=room.id) }}">Crea la primera</a>.</p>
 {% endif %}
 
 {% endblock %}

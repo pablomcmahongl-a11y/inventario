@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Editar objeto' if item else 'Nuevo objeto' }}{% endblock %}
 {% block content %}
+{% from "_forms.html" import csrf_field %}
 
 <h2>{{ 'Editar objeto' if item else 'Nuevo objeto' }}</h2>
 
 <form method="post" enctype="multipart/form-data" class="form">
+  {{ csrf_field() }}
   <label>Nombre *
     <input type="text" name="name" required value="{{ item.name if item else '' }}">
   </label>
@@ -38,20 +40,24 @@
     <textarea name="notes" rows="3">{{ item.notes if item and item.notes else '' }}</textarea>
   </label>
 
-  <label>Foto
-    <input type="file" name="photo" accept="image/*" capture="environment">
+  <label>Añadir fotos
+    <input type="file" name="photos" accept="image/*" capture="environment" multiple>
   </label>
 
-  {% if item and item.photo_filename %}
-    <div class="current-photo">
-      <img src="{{ url_for('uploaded_file', filename=item.photo_filename) }}" alt="foto actual">
-      <label class="checkbox"><input type="checkbox" name="remove_photo" value="1"> Quitar foto actual</label>
+  {% if item and item.photos %}
+    <div class="photo-gallery-edit">
+      {% for photo in item.photos %}
+        <label class="photo-remove-tile">
+          <img src="{{ url_for('main.uploaded_file', filename=photo.filename) }}" alt="foto {{ loop.index }}">
+          <span class="checkbox"><input type="checkbox" name="remove_photo_ids" value="{{ photo.id }}"> Quitar</span>
+        </label>
+      {% endfor %}
     </div>
   {% endif %}
 
   <div class="form-actions">
     <button type="submit">{{ 'Guardar cambios' if item else 'Añadir objeto' }}</button>
-    <a href="{{ url_for('index') }}" class="btn-secondary">Cancelar</a>
+    <a href="{{ url_for('items.detail', item_id=item.id) if item else url_for('main.dashboard') }}" class="btn-secondary">Cancelar</a>
   </div>
 </form>
 

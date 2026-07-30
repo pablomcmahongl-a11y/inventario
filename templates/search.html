@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Buscar · Inventario{% endblock %}
+{% block content %}
+{% from "_icons.html" import icon %}
+
+<h2>{{ icon('search', 22) }} Buscar objetos</h2>
+
+<form class="filters" method="get">
+  <input type="text" name="q" placeholder="Nombre, notas, categoría..." value="{{ q }}">
+
+  <select name="category">
+    <option value="">Todas las categorías</option>
+    {% for c in categories %}
+      <option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="room_id">
+    <option value="">Todas las habitaciones</option>
+    {% for r in rooms %}
+      <option value="{{ r.id }}" {% if selected_room == r.id|string %}selected{% endif %}>{{ r.name }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="box_id">
+    <option value="">Todas las cajas</option>
+    {% for b in boxes %}
+      <option value="{{ b.id }}" {% if selected_box == b.id|string %}selected{% endif %}>{{ b.name }}</option>
+    {% endfor %}
+  </select>
+
+  <button type="submit">Filtrar</button>
+  {% if has_filters %}
+    <a href="{{ url_for('main.search') }}" class="clear-link">Limpiar</a>
+  {% endif %}
+</form>
+
+<p class="muted">{{ items|length }} resultado(s)</p>
+
+{% if items %}
+<div class="grid">
+  {% for item in items %}
+  <div class="card">
+    {% if item.cover_photo %}
+      <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=item.cover_photo.filename) }}" alt="{{ item.name }}">
+    {% else %}
+      <div class="card-photo placeholder">{{ icon('item', 32) }}</div>
+    {% endif %}
+    <div class="card-body">
+      <h3><a href="{{ url_for('items.detail', item_id=item.id) }}" class="card-link">{{ item.name }}</a></h3>
+      <p class="muted">Cantidad: {{ item.quantity }}</p>
+      {% if item.category %}<span class="tag">{{ item.category }}</span>{% endif %}
+      {% if item.box %}
+        <p class="muted">{{ icon('box', 14) }} <a href="{{ url_for('boxes.detail', box_id=item.box.id) }}">{{ item.box.name }}</a>
+          {% if item.box.room %} · {{ item.box.room.name }}{% endif %}
+        </p>
+      {% else %}
+        <p class="muted">Sin caja asignada</p>
+      {% endif %}
+      {% if item.notes %}<p class="notes">{{ item.notes }}</p>{% endif %}
+      <div class="card-actions">
+        <a href="{{ url_for('items.detail', item_id=item.id) }}">Ver</a>
+        <a href="{{ url_for('items.edit', item_id=item.id) }}">Editar</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">No se han encontrado objetos.
+  {% if not has_filters %}<a href="{{ url_for('items.new') }}">Añade el primero</a>.{% endif %}
+</p>
+{% endif %}
+
+{% endblock %}

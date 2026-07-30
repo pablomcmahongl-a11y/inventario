@@ -1,20 +1,42 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="auto">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#b5602e">
 <title>{% block title %}Inventario de casa{% endblock %}</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><text y=%2220%22 font-size=%2220%22>📦</text></svg>">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+{% from "_icons.html" import icon %}
+{% from "_forms.html" import csrf_field %}
 <header class="topbar">
-  <a href="{{ url_for('index') }}" class="brand">📦 Inventario</a>
+  <a href="{{ url_for('main.dashboard') }}" class="brand">{{ icon('box', 22) }} Inventario</a>
+
+  {% if current_user.is_authenticated %}
+  <form class="quick-search" method="get" action="{{ url_for('main.search') }}" role="search">
+    {{ icon('search', 16) }}
+    <input type="search" name="q" placeholder="Buscar objetos..." aria-label="Buscar objetos">
+  </form>
+
   <nav>
-    <a href="{{ url_for('index') }}">Habitaciones</a>
-    <a href="{{ url_for('room_new') }}" class="btn-nav">+ Habitación</a>
-    <a href="{{ url_for('box_new') }}" class="btn-nav">+ Caja</a>
-    <a href="{{ url_for('item_new') }}" class="btn-nav">+ Objeto</a>
+    <a href="{{ url_for('rooms.list_rooms') }}">{{ icon('room') }} Habitaciones</a>
+    <a href="{{ url_for('boxes.list_boxes') }}">{{ icon('box') }} Cajas</a>
+    <a href="{{ url_for('main.search') }}">{{ icon('search') }} Buscar</a>
+    <span class="nav-divider"></span>
+    <a href="{{ url_for('rooms.new') }}" class="btn-nav-ghost" title="Nueva habitación">{{ icon('plus', 14) }} Habitación</a>
+    <a href="{{ url_for('boxes.new') }}" class="btn-nav-ghost" title="Nueva caja">{{ icon('plus', 14) }} Caja</a>
+    <a href="{{ url_for('items.new') }}" class="btn-nav">{{ icon('plus', 16) }} Objeto</a>
+    <div class="user-menu">
+      <span class="muted">{{ icon('user', 16) }} {{ current_user.username }}</span>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        {{ csrf_field() }}
+        <button type="submit" class="link-plain" title="Cerrar sesión">{{ icon('logout', 16) }}</button>
+      </form>
+    </div>
   </nav>
+  {% endif %}
 </header>
 
 <main class="container">
@@ -30,5 +52,9 @@
 
   {% block content %}{% endblock %}
 </main>
+
+<footer class="site-footer">
+  <span>Inventario de casa</span>
+</footer>
 </body>
 </html>

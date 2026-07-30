@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name }} · Inventario{% endblock %}
+{% block content %}
+{% from "_icons.html" import icon %}
+{% from "_forms.html" import csrf_field %}
+
+{% set action_labels = {"created": "añadido", "updated": "actualizado", "moved": "movido", "deleted": "eliminado"} %}
+
+<a href="{{ url_for('boxes.detail', box_id=item.box.id) if item.box else url_for('main.dashboard') }}" class="back-link">
+  {{ icon('chevron-left', 14) }} {{ item.box.name if item.box else 'Inicio' }}
+</a>
+
+<div class="item-detail">
+  <div class="item-detail-photos">
+    {% if item.photos %}
+      <img class="detail-photo-main" id="main-photo" src="{{ url_for('main.uploaded_file', filename=item.cover_photo.filename) }}" alt="{{ item.name }}">
+      {% if item.photos|length > 1 %}
+      <div class="thumb-row">
+        {% for photo in item.photos %}
+          <img class="thumb" src="{{ url_for('main.uploaded_file', filename=photo.filename) }}"
+               alt="foto {{ loop.index }}" onclick="document.getElementById('main-photo').src=this.src">
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="card-photo placeholder detail-photo-main">{{ icon('item', 48) }}</div>
+    {% endif %}
+  </div>
+
+  <div class="item-detail-info">
+    <h2>{{ item.name }}</h2>
+    {% if item.category %}<span class="tag">{{ item.category }}</span>{% endif %}
+
+    <div class="quantity-row">
+      <span class="muted">Cantidad</span>
+      <form method="post" action="{{ url_for('items.quantity', item_id=item.id) }}" class="quantity-form">
+        {{ csrf_field() }}
+        <input type="hidden" name="delta" value="-1">
+        <input type="hidden" name="next" value="{{ url_for('items.detail', item_id=item.id) }}">
+        <button type="submit" class="qty-btn" {% if item.quantity <= 0 %}disabled{% endif %}>{{ icon('minus', 16) }}</button>
+      </form>
+      <strong class="qty-value">{{ item.quantity }}</strong>
+      <form method="post" action="{{ url_for('items.quantity', item_id=item.id) }}" class="quantity-form">
+        {{ csrf_field() }}
+        <input type="hidden" name="delta" value="1">
+        <input type="hidden" name="next" value="{{ url_for('items.detail', item_id=item.id) }}">
+        <button type="submit" class="qty-btn">{{ icon('plus', 16) }}</button>
+      </form>
+    </div>
+
+    {% if item.box %}
+      <p class="muted">{{ icon('box', 14) }} <a href="{{ url_for('boxes.detail', box_id=item.box.id) }}">{{ item.box.name }}</a>
+        {% if item.box.room %} · {{ icon('room', 14) }} <a href="{{ url_for('rooms.detail', room_id=item.box.room.id) }}">{{ item.box.room.name }}</a>{% endif %}
+      </p>
+    {% else %}
+      <p class="muted">Sin caja asignada</p>
+    {% endif %}
+
+    {% if item.notes %}<p class="notes">{{ item.notes }}</p>{% endif %}
+
+    <p class="muted small">Añadido el {{ item.created_at.strftime('%d/%m/%Y') if item.created_at else '—' }}</p>
+
+    <div class="card-actions">
+      <a href="{{ url_for('items.edit', item_id=item.id) }}">{{ icon('edit', 14) }} Editar</a>
+      <form method="post" action="{{ url_for('items.delete', item_id=item.id) }}"
+            onsubmit="return confirm('¿Eliminar {{ item.name }}?');">
+        {{ csrf_field() }}
+        <button type="submit" class="link-danger">{{ icon('trash', 14) }} Eliminar</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<h3 class="section-title">{{ icon('history') }} Historial</h3>
+{% if history %}
+<ul class="activity-list">
+  {% for a in history %}
+  <li>
+    <span>{{ action_labels.get(a.action, a.action) }}{% if a.detail %} · {{ a.detail }}{% endif %}</span>
+    <time class="muted small">{{ a.timestamp.strftime('%d/%m/%Y %H:%M') }}</time>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">Sin historial.</p>
+{% endif %}
+
+{% endblock %}

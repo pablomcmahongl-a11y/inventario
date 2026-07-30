@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Editar habitación' if room else 'Nueva habitación' }}{% endblock %}
 {% block content %}
+{% from "_forms.html" import csrf_field %}
 
 <h2>{{ 'Editar habitación' if room else 'Nueva habitación' }}</h2>
 
-<form method="post" class="form">
+<form method="post" enctype="multipart/form-data" class="form">
+  {{ csrf_field() }}
   <label>Nombre *
     <input type="text" name="name" required value="{{ room.name if room else '' }}"
            placeholder="p.ej. Salón, Cocina, Dormitorio...">
@@ -14,9 +16,20 @@
     <textarea name="description" rows="3">{{ room.description if room and room.description else '' }}</textarea>
   </label>
 
+  <label>Foto
+    <input type="file" name="photo" accept="image/*" capture="environment">
+  </label>
+
+  {% if room and room.photo_filename %}
+    <div class="current-photo">
+      <img src="{{ url_for('main.uploaded_file', filename=room.photo_filename) }}" alt="foto actual">
+      <label class="checkbox"><input type="checkbox" name="remove_photo" value="1"> Quitar foto actual</label>
+    </div>
+  {% endif %}
+
   <div class="form-actions">
     <button type="submit">{{ 'Guardar cambios' if room else 'Crear habitación' }}</button>
-    <a href="{{ url_for('index') }}" class="btn-secondary">Cancelar</a>
+    <a href="{{ url_for('rooms.list_rooms') }}" class="btn-secondary">Cancelar</a>
   </div>
 </form>
 

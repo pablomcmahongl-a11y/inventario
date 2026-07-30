@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#b5602e">
+<title>Iniciar sesión · Inventario</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-body">
+{% from "_icons.html" import icon %}
+{% from "_forms.html" import csrf_field %}
+
+<main class="login-card">
+  <div class="login-brand">{{ icon('box', 28) }} <span>Inventario</span></div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="post" class="form">
+    {{ csrf_field() }}
+    <label>Usuario
+      <input type="text" name="username" required autofocus autocomplete="username">
+    </label>
+    <label>Contraseña
+      <input type="password" name="password" required autocomplete="current-password">
+    </label>
+    <div class="form-actions">
+      <button type="submit">Entrar</button>
+    </div>
+  </form>
+</main>
+</body>
+</html>

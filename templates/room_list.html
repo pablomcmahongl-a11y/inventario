@@ -1,24 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Habitaciones · Inventario{% endblock %}
 {% block content %}
+{% from "_icons.html" import icon %}
+{% from "_forms.html" import csrf_field %}
 
-<h2>Habitaciones</h2>
+<div class="page-header">
+  <h2>{{ icon('room', 22) }} Habitaciones</h2>
+  <a href="{{ url_for('rooms.new') }}" class="btn-nav">{{ icon('plus', 14) }} Nueva habitación</a>
+</div>
 
 {% if rooms %}
 <div class="grid">
   {% for room in rooms %}
   <div class="card">
-    <div class="card-photo placeholder">🏠</div>
+    {% if room.photo_filename %}
+      <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=room.photo_filename) }}" alt="{{ room.name }}">
+    {% else %}
+      <div class="card-photo placeholder">{{ icon('room', 32) }}</div>
+    {% endif %}
     <div class="card-body">
-      <h3><a href="{{ url_for('room_detail', room_id=room.id) }}" class="card-link">{{ room.name }}</a></h3>
+      <h3><a href="{{ url_for('rooms.detail', room_id=room.id) }}" class="card-link">{{ room.name }}</a></h3>
       <p class="muted">{{ room.boxes|length }} caja(s)</p>
       {% if room.description %}<p class="notes">{{ room.description }}</p>{% endif %}
       <div class="card-actions">
-        <a href="{{ url_for('room_edit', room_id=room.id) }}">Editar</a>
-        <a href="{{ url_for('box_new', room_id=room.id) }}">+ Caja</a>
-        <form method="post" action="{{ url_for('room_delete', room_id=room.id) }}"
-              onsubmit="return confirm('¿Eliminar la habitación {{ room.name }}? Las cajas quedarán sin habitación.');"
-              style="display:inline;">
+        <a href="{{ url_for('rooms.edit', room_id=room.id) }}">Editar</a>
+        <a href="{{ url_for('boxes.new', room_id=room.id) }}">+ Caja</a>
+        <form method="post" action="{{ url_for('rooms.delete', room_id=room.id) }}"
+              onsubmit="return confirm('¿Eliminar la habitación {{ room.name }}? Las cajas quedarán sin habitación.');">
+          {{ csrf_field() }}
           <button type="submit" class="link-danger">Eliminar</button>
         </form>
       </div>
@@ -27,7 +36,7 @@
   {% endfor %}
 </div>
 {% else %}
-<p class="empty">Todavía no hay habitaciones. <a href="{{ url_for('room_new') }}">Crea la primera</a>.</p>
+<p class="empty">Todavía no hay habitaciones. <a href="{{ url_for('rooms.new') }}">Crea la primera</a>.</p>
 {% endif %}
 
 {% endblock %}

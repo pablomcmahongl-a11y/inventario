@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}No encontrado · Inventario{% endblock %}
+{% block content %}
+{% from "_icons.html" import icon %}
+<div class="error-page">
+  {{ icon('search', 48) }}
+  <h2>404 · No se ha encontrado esta página</h2>
+  <p class="muted">Puede que el objeto, la caja o la habitación se hayan eliminado.</p>
+  <a href="{{ url_for('main.dashboard') }}" class="btn-secondary">Volver al inicio</a>
+</div>
+{% endblock %}

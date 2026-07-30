@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Inicio · Inventario{% endblock %}
+{% block content %}
+{% from "_icons.html" import icon %}
+
+{% set action_labels = {"created": "añadido", "updated": "actualizado", "moved": "movido", "deleted": "eliminado"} %}
+{% set entity_labels = {"room": "Habitación", "box": "Caja", "item": "Objeto"} %}
+{% set entity_icons = {"room": "room", "box": "box", "item": "item"} %}
+
+<div class="stat-row">
+  <div class="stat-tile">
+    <div class="stat-icon">{{ icon('room', 22) }}</div>
+    <div><div class="stat-value">{{ room_count }}</div><div class="stat-label">Habitaciones</div></div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-icon">{{ icon('box', 22) }}</div>
+    <div><div class="stat-value">{{ box_count }}</div><div class="stat-label">Cajas</div></div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-icon">{{ icon('item', 22) }}</div>
+    <div><div class="stat-value">{{ item_count }}</div><div class="stat-label">Objetos distintos</div></div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-icon">{{ icon('package-open', 22) }}</div>
+    <div><div class="stat-value">{{ total_units }}</div><div class="stat-label">Unidades totales</div></div>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <section class="panel">
+    <h3>{{ icon('chart') }} Por categoría</h3>
+    {% if category_counts %}
+      <div class="bar-list">
+        {% for category, count in category_counts %}
+        <a href="{{ url_for('main.search', category=category) }}" class="bar-row">
+          <span class="bar-label">{{ category }}</span>
+          <span class="bar-track"><span class="bar-fill" style="width: {{ (count / max_cat * 100) if max_cat else 0 }}%"></span></span>
+          <span class="bar-count">{{ count }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">Todavía no hay objetos con categoría.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h3>{{ icon('history') }} Actividad reciente</h3>
+    {% if recent_activity %}
+      <ul class="activity-list">
+        {% for a in recent_activity %}
+        <li>
+          <span class="activity-icon">{{ icon(entity_icons.get(a.entity_type, 'item'), 15) }}</span>
+          <span>
+            <strong>{{ entity_labels.get(a.entity_type, a.entity_type) }}</strong>
+            "{{ a.entity_name }}" {{ action_labels.get(a.action, a.action) }}
+            {% if a.detail %}<span class="muted">· {{ a.detail }}</span>{% endif %}
+          </span>
+          <time class="muted small" datetime="{{ a.timestamp.isoformat() }}">{{ a.timestamp.strftime('%d/%m %H:%M') }}</time>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">Sin actividad todavía.</p>
+    {% endif %}
+  </section>
+</div>
+
+{% if recent_items %}
+<h3 class="section-title">Añadidos recientemente</h3>
+<div class="grid">
+  {% for item in recent_items %}
+  <div class="card">
+    {% if item.cover_photo %}
+      <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=item.cover_photo.filename) }}" alt="{{ item.name }}">
+    {% else %}
+      <div class="card-photo placeholder">{{ icon('item', 32) }}</div>
+    {% endif %}
+    <div class="card-body">
+      <h3><a href="{{ url_for('items.detail', item_id=item.id) }}" class="card-link">{{ item.name }}</a></h3>
+      <p class="muted">Cantidad: {{ item.quantity }}</p>
+      {% if item.category %}<span class="tag">{{ item.category }}</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if empty_boxes %}
+<h3 class="section-title">{{ icon('empty') }} Cajas vacías</h3>
+<p class="muted">Puede que estas cajas ya no se necesiten, o que se les haya olvidado asignar objetos.</p>
+<div class="chip-list">
+  {% for box in empty_boxes %}
+  <a href="{{ url_for('boxes.detail', box_id=box.id) }}" class="chip">{{ box.name }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if room_count == 0 %}
+<p class="empty">Todavía no hay nada en el inventario. <a href="{{ url_for('rooms.new') }}">Crea tu primera habitación</a> para empezar.</p>
+{% endif %}
+
+{% endblock %}
