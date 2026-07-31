@@ -295,6 +295,8 @@ a { color: inherit; }
   color: var(--muted);
 }
 
+.card-photo-link { display: block; }
+
 .card-body { padding: 14px; }
 .card-body h3 { margin: 0 0 6px; font-size: 1.05rem; }
 
@@ -481,6 +483,44 @@ a { color: inherit; }
 .box-qr-thumb img { width: 100px; height: 100px; }
 
 /* ---------------------------------------------------------------- DASHBOARD */
+
+.quick-access {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.access-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 22px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: var(--shadow);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.access-tile:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+  transform: translateY(-1px);
+}
+
+.access-tile .icon { color: var(--accent); width: 28px; height: 28px; }
+
+@media (max-width: 480px) {
+  .quick-access { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .access-tile { padding: 14px 6px; font-size: 0.8rem; }
+}
 
 .stat-row {
   display: grid;

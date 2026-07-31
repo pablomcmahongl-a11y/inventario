@@ -27,7 +27,9 @@
   {% for box in boxes %}
   <div class="card">
     {% if box.photo_filename %}
-      <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=box.photo_filename) }}" alt="{{ box.name }}">
+      <a href="{{ url_for('boxes.detail', box_id=box.id) }}" class="card-photo-link">
+        <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=box.photo_filename) }}" alt="{{ box.name }}">
+      </a>
     {% else %}
       <a href="{{ url_for('boxes.detail', box_id=box.id) }}" class="box-qr-thumb">
         <img src="{{ url_for('boxes.qr', box_id=box.id) }}" alt="QR {{ box.name }}">

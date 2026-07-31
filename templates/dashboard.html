@@ -7,6 +7,21 @@
 {% set entity_labels = {"room": "Habitación", "box": "Caja", "item": "Objeto"} %}
 {% set entity_icons = {"room": "room", "box": "box", "item": "item"} %}
 
+<div class="quick-access">
+  <a href="{{ url_for('rooms.list_rooms') }}" class="access-tile">
+    {{ icon('room', 28) }}
+    <span>Habitaciones</span>
+  </a>
+  <a href="{{ url_for('boxes.list_boxes') }}" class="access-tile">
+    {{ icon('box', 28) }}
+    <span>Cajas</span>
+  </a>
+  <a href="{{ url_for('main.search') }}" class="access-tile">
+    {{ icon('item', 28) }}
+    <span>Objetos</span>
+  </a>
+</div>
+
 <div class="stat-row">
   <div class="stat-tile">
     <div class="stat-icon">{{ icon('room', 22) }}</div>
@@ -71,11 +86,13 @@
 <div class="grid">
   {% for item in recent_items %}
   <div class="card">
-    {% if item.cover_photo %}
-      <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=item.cover_photo.filename) }}" alt="{{ item.name }}">
-    {% else %}
-      <div class="card-photo placeholder">{{ icon('item', 32) }}</div>
-    {% endif %}
+    <a href="{{ url_for('items.detail', item_id=item.id) }}" class="card-photo-link">
+      {% if item.cover_photo %}
+        <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=item.cover_photo.filename) }}" alt="{{ item.name }}">
+      {% else %}
+        <div class="card-photo placeholder">{{ icon('item', 32) }}</div>
+      {% endif %}
+    </a>
     <div class="card-body">
       <h3><a href="{{ url_for('items.detail', item_id=item.id) }}" class="card-link">{{ item.name }}</a></h3>
       <p class="muted">Cantidad: {{ item.quantity }}</p>

@@ -13,11 +13,13 @@
 <div class="grid">
   {% for room in rooms %}
   <div class="card">
-    {% if room.photo_filename %}
-      <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=room.photo_filename) }}" alt="{{ room.name }}">
-    {% else %}
-      <div class="card-photo placeholder">{{ icon('room', 32) }}</div>
-    {% endif %}
+    <a href="{{ url_for('rooms.detail', room_id=room.id) }}" class="card-photo-link">
+      {% if room.photo_filename %}
+        <img class="card-photo" src="{{ url_for('main.uploaded_file', filename=room.photo_filename) }}" alt="{{ room.name }}">
+      {% else %}
+        <div class="card-photo placeholder">{{ icon('room', 32) }}</div>
+      {% endif %}
+    </a>
     <div class="card-body">
       <h3><a href="{{ url_for('rooms.detail', room_id=room.id) }}" class="card-link">{{ room.name }}</a></h3>
       <p class="muted">{{ room.boxes|length }} caja(s)</p>
